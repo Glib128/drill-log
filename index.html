@@ -1,0 +1,305 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#12306b">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<title>Drill Log</title>
+<style>
+:root{
+  --ink:#10213f; --navy:#12306b; --sea:#2f56b5; --mist:#dfe6f5; --paper:#f3f5fa; --card:#fff;
+  --flag:#f2a900; --alarm:#c8321f; --ok:#1f7a4d; --line:#c9d2e6; --muted:#5c6b8a;
+  --font:"Avenir Next","Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.45 var(--font)}
+body{padding-bottom:env(safe-area-inset-bottom)}
+button,input,select,textarea{font:inherit;color:inherit}
+header.bar{position:sticky;top:0;z-index:5;background:var(--navy);color:#fff;
+  padding:calc(10px + env(safe-area-inset-top)) 16px 10px;display:flex;align-items:center;gap:10px}
+header.bar h1{font-size:1.1rem;margin:0;flex:1;font-weight:650;letter-spacing:.01em}
+header.bar .mark{width:26px;height:26px;flex:none}
+.btn{border:0;border-radius:8px;padding:10px 14px;background:var(--sea);color:#fff;font-weight:600;cursor:pointer;min-height:42px}
+.btn:active{transform:translateY(1px)}
+.btn.ghost{background:transparent;color:#fff;border:1px solid rgba(255,255,255,.45)}
+.btn.flag{background:var(--flag);color:#241a00}
+.btn.light{background:var(--mist);color:var(--navy)}
+.btn.danger{background:#fbe6e2;color:var(--alarm)}
+.btn.sm{padding:6px 10px;min-height:34px;font-size:.9rem}
+:focus-visible{outline:3px solid var(--flag);outline-offset:2px}
+main{max-width:980px;margin:0 auto;padding:16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px;margin-bottom:16px}
+.card h2{margin:0 0 12px;font-size:1.05rem;color:var(--navy)}
+.hint{color:var(--muted);font-size:.9rem;margin:0 0 10px}
+.grid3{display:grid;grid-template-columns:2fr 1.3fr .7fr;gap:12px}
+@media(max-width:640px){.grid3{grid-template-columns:1fr}}
+label.f{display:block;font-size:.85rem;color:var(--muted);margin-bottom:4px}
+input[type=text],input[type=date],input[type=time],input[type=number],select,textarea,.pickbtn{
+  width:100%;border:1px solid var(--line);border-radius:8px;padding:10px;background:#fff;min-height:44px}
+textarea{min-height:90px;resize:vertical}
+.pickbtn{text-align:left;cursor:pointer;display:block;background:#fff}
+.pickbtn.empty{color:#8b97b3}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.chip{background:var(--mist);color:var(--navy);border-radius:999px;padding:3px 10px;font-size:.85rem}
+.stage{display:grid;grid-template-columns:96px 1fr 64px auto;gap:8px;align-items:center;padding:10px 0;border-top:1px solid var(--line)}
+.stage:first-of-type{border-top:0}
+@media(max-width:640px){.stage{grid-template-columns:90px 1fr 56px;}.stage .acts{grid-column:1/-1;display:flex;gap:8px}}
+.thumb{width:56px;height:56px;border-radius:8px;border:1px dashed var(--line);background:var(--paper);display:grid;place-items:center;cursor:pointer;overflow:hidden;padding:0}
+.thumb img{width:100%;height:100%;object-fit:cover}
+.thumb svg{width:22px;height:22px;stroke:var(--muted)}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.row.end{justify-content:flex-end}
+.spacer{flex:1}
+table.list{width:100%;border-collapse:collapse}
+table.list th{text-align:left;font-size:.85rem;color:var(--muted);font-weight:600;padding:8px;border-bottom:2px solid var(--line)}
+table.list td{padding:10px 8px;border-bottom:1px solid var(--line);vertical-align:middle}
+.empty-state{text-align:center;padding:40px 16px;color:var(--muted)}
+.empty-state strong{display:block;color:var(--ink);font-size:1.1rem;margin-bottom:6px}
+dialog{border:0;border-radius:12px;padding:0;width:min(520px,94vw);max-height:84vh;box-shadow:0 20px 60px rgba(8,20,50,.4)}
+dialog::backdrop{background:rgba(8,20,50,.55)}
+dialog form{display:flex;flex-direction:column;max-height:84vh}
+dialog h3{margin:0;padding:16px 16px 8px;font-size:1.05rem}
+dialog .opts{overflow:auto;padding:4px 8px}
+dialog .opt{display:flex;gap:12px;align-items:center;padding:10px 8px;border-radius:8px;cursor:pointer}
+dialog .opt:hover{background:var(--paper)}
+dialog .opt input{width:20px;height:20px;accent-color:var(--sea)}
+dialog footer{display:flex;gap:8px;justify-content:flex-end;padding:12px 16px;border-top:1px solid var(--line)}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom));transform:translateX(-50%);
+  background:var(--ink);color:#fff;padding:10px 16px;border-radius:8px;z-index:20;box-shadow:0 6px 20px rgba(0,0,0,.3)}
+.net{font-size:.78rem;padding:2px 8px;border-radius:999px;background:rgba(255,255,255,.18)}
+/* report preview */
+.rep h2{margin:0 0 4px;font-size:1.4rem;color:var(--navy)}
+.rep .meta{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:12px 0 18px}
+@media(max-width:640px){.rep .meta{grid-template-columns:1fr 1fr}}
+.rep .meta div{background:var(--paper);border-radius:8px;padding:8px 10px}
+.rep .meta small{display:block;color:var(--muted)}
+.rep h4{margin:20px 0 8px;color:var(--navy);border-bottom:2px solid var(--flag);padding-bottom:4px}
+.rep .st{display:grid;grid-template-columns:70px 1fr 120px;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line)}
+.rep .st img{width:120px;height:90px;object-fit:cover;border-radius:6px}
+.rep .cols{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+@media(max-width:640px){.rep .cols{grid-template-columns:1fr}}
+.rep ul{margin:0;padding-left:18px}
+.install{display:none}
+@media print{
+  header.bar,.noprint,.toast{display:none!important}
+  body,html{background:#fff}main{padding:0;max-width:none}.card{border:0;padding:0}
+  .rep h4{break-after:avoid}.rep .st{break-inside:avoid}
+}
+</style>
+</head>
+<body>
+<header class="bar" id="bar"></header>
+<main id="app"></main>
+<input type="file" id="cam" accept="image/*" capture="environment" hidden>
+
+<script>
+"use strict";
+/* ---------- reference lists (edit freely) ---------- */
+const DRILL_TYPES=["Abandon ship","Fire in the engine room","Fire in the accommodation","Fire in the galley","Fire on the bridge","Fire on the cargo deck","MOB: person missing, SAR","MOB: immediate action","MOB: delayed action","ESE: entry and rescue from dry bulk cargo tank","ESE: entry and rescue from FO daily tank","Oil spill response","Blackout","Steering gear failure","Other"];
+const EQUIPMENT=["AHT emergency release of towing gear","Comm. Bridge–ER","Comm. Bridge–Steering gear room","Comm. ER–Steering gear room","Emergency generator","Emergency towing equipment","Emergency towing gear","Fire extinguishers","Fire extinguisher, king size","Fire flags","Fire hoses and nozzles","ISPS citadel equipment","ISPS security distress button","ISPS security alarm","ISPS citadel communication","ISPS security equipment","LSA life jackets","LSA life rafts","LSA life boat","LSA life buoy","LSA life ring","LSA rescue net","Rescue boat"];
+const SKILLS=["Assessment of watertight integrity","Communication in emergency","CPR technique","Deployment of emergency towing gear","Deployment of liferaft/boat","Deployment of rescue boat","Distress alert sending","Donning and use of SCBA","Donning of chemical suits","Donning of fire suits","Donning of immersion suits","Donning of life jackets","Emergency release of AHT/towing gear","Evacuation of casualty","Fire extinguisher use","Fire hose use","Fire CO₂ system use"];
+const RANKS=["Master","Chief officer","2nd officer","3rd officer","Chief engineer","2nd engineer","3rd engineer","ETO","Bosun","AB","Engine rating","Other"];
+
+/* ---------- storage: IndexedDB for reports (photos included), localStorage for settings ---------- */
+const openDB=()=>new Promise((res,rej)=>{const r=indexedDB.open("drilllog",1);
+  r.onupgradeneeded=()=>r.result.createObjectStore("reports",{keyPath:"id"});
+  r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)});
+async function tx(mode,fn){const db=await openDB();return new Promise((res,rej)=>{
+  const t=db.transaction("reports",mode);const rq=fn(t.objectStore("reports"));
+  t.oncomplete=()=>res(rq&&rq.result);t.onerror=()=>rej(t.error)})}
+const dbAll=()=>tx("readonly",s=>s.getAll());
+const dbGet=id=>tx("readonly",s=>s.get(id));
+const dbPut=r=>tx("readwrite",s=>s.put(r));
+const dbDel=id=>tx("readwrite",s=>s.delete(id));
+const getCfg=()=>{try{return Object.assign({vessel:"",imo:"",crew:[]},JSON.parse(localStorage.getItem("drilllog.cfg")||"{}"))}catch(e){return{vessel:"",imo:"",crew:[]}}};
+const setCfg=c=>{try{localStorage.setItem("drilllog.cfg",JSON.stringify(c))}catch(e){}};
+
+/* ---------- helpers ---------- */
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+const today=()=>new Date().toISOString().slice(0,10);
+const nowHM=()=>new Date().toTimeString().slice(0,5);
+const isoWeek=d=>{const t=new Date(d+"T00:00:00");if(isNaN(t))return"";t.setDate(t.getDate()+3-(t.getDay()+6)%7);
+  const w=new Date(t.getFullYear(),0,4);return 1+Math.round(((t-w)/864e5-3+(w.getDay()+6)%7)/7)};
+const fmtDate=d=>d?new Date(d+"T00:00:00").toLocaleDateString(undefined,{day:"2-digit",month:"short",year:"numeric"}):"";
+function toast(msg){document.querySelectorAll(".toast").forEach(t=>t.remove());const t=document.createElement("div");
+  t.className="toast";t.setAttribute("role","status");t.textContent=msg;document.body.append(t);setTimeout(()=>t.remove(),2600)}
+const ICON_CAM='<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>';
+const MARK='<svg class="mark" viewBox="0 0 26 26"><rect width="26" height="26" rx="5" fill="#fff" fill-opacity=".12"/><path d="M5 8l16 5-16 5z" fill="#f2a900"/><rect x="5" y="5" width="2.6" height="16" fill="#fff"/></svg>';
+
+function pick({title,options,selected=[],multi=true,allowOther=false}){
+  return new Promise(resolve=>{
+    const d=document.createElement("dialog");
+    d.innerHTML=`<form method="dialog"><h3>${esc(title)}</h3><div class="opts">${options.map((o,i)=>
+      `<label class="opt"><input type="${multi?"checkbox":"radio"}" name="o" value="${i}" ${selected.includes(o)?"checked":""}><span>${esc(o)}</span></label>`).join("")}</div>
+      <footer><button class="btn light" value="cancel">Cancel</button><button class="btn" value="ok">Done</button></footer></form>`;
+    document.body.append(d);d.showModal();
+    d.addEventListener("close",()=>{
+      let out=null;
+      if(d.returnValue==="ok")out=[...d.querySelectorAll("input:checked")].map(i=>options[+i.value]);
+      d.remove();resolve(out)});
+  });
+}
+
+/* ---------- state & routing ---------- */
+let cur=null, dirty=false, camIdx=null;
+window.addEventListener("hashchange",route);
+async function route(){
+  const [_,page,id]=location.hash.split("/");
+  if(page==="new"){cur=newReport();dirty=false;return renderEditor()}
+  if(page==="edit"&&id){cur=await dbGet(id);if(!cur)return go("");dirty=false;return renderEditor()}
+  if(page==="view"&&id){const r=await dbGet(id);if(!r)return go("");return renderView(r)}
+  return renderList();
+}
+const go=h=>{location.hash=h?"#/"+h:"#/"};
+function newReport(){const c=getCfg();return{id:uid(),type:"",name:"",date:today(),week:isoWeek(today()),vessel:c.vessel,imo:c.imo,
+  stages:[{time:nowHM(),desc:"",photo:""}],equipment:[],skills:[],comms:"",notes:"",participants:[],updated:Date.now()}}
+const leave=()=>!dirty||confirm("Leave without saving this report?");
+
+/* ---------- header ---------- */
+function setBar(title,btns=""){ $("#bar").innerHTML=`${MARK}<h1>${esc(title)}</h1><span class="net" id="net"></span>${btns}`;updNet() }
+function updNet(){const n=$("#net");if(n)n.textContent=navigator.onLine?"Online":"Offline"}
+addEventListener("online",updNet);addEventListener("offline",updNet);
+
+/* ---------- list ---------- */
+async function renderList(){
+  setBar("Drill reports",`<button class="btn ghost sm" data-a="options">Options</button><button class="btn flag sm" data-a="new">New report</button>`);
+  const all=(await dbAll()).sort((a,b)=>(b.date+b.updated).localeCompare(a.date+a.updated));
+  $("#app").innerHTML=`<div class="card">${all.length?`<table class="list"><thead><tr><th>Drill</th><th>Date</th><th>Vessel</th><th></th></tr></thead><tbody>${
+    all.map(r=>`<tr><td><strong>${esc(r.type||"Untitled drill")}</strong>${r.name?`<br><small>${esc(r.name)}</small>`:""}</td><td>${fmtDate(r.date)}</td><td>${esc(r.vessel)}</td>
+    <td class="row end"><button class="btn light sm" data-a="view" data-id="${r.id}">View</button><button class="btn light sm" data-a="edit" data-id="${r.id}">Edit</button><button class="btn danger sm" data-a="del" data-id="${r.id}">Delete</button></td></tr>`).join("")}</tbody></table>`
+    :`<div class="empty-state"><strong>No drill reports yet</strong>Reports are saved on this device and work without a connection.<br><br><button class="btn" data-a="new">Create the first report</button></div>`}</div>
+    <p class="hint install" id="inst"><button class="btn light sm" data-a="install">Install app on this device</button></p>`;
+  if(deferred)$("#inst").style.display="block";
+}
+
+/* ---------- editor ---------- */
+function renderEditor(){
+  const r=cur;
+  setBar(location.hash.includes("edit")?"Edit report":"New report",
+   `<button class="btn ghost sm" data-a="options">Options</button><button class="btn ghost sm" data-a="exit">Exit</button><button class="btn flag sm" data-a="save">Save report</button>`);
+  const chips=a=>a.length?`<div class="chips">${a.map(x=>`<span class="chip">${esc(x)}</span>`).join("")}</div>`:"";
+  const dl=[...new Set([...getCfg().crew,...r.participants.map(p=>p.name)])];
+  $("#app").innerHTML=`
+  <div class="card"><h2>Drill</h2><div class="grid3">
+    <div><label class="f">Name of drill</label><button class="pickbtn ${r.type?"":"empty"}" data-a="pickType">${esc(r.type||"Select drill type")}</button></div>
+    <div><label class="f" for="date">Date</label><input type="date" id="date" data-b="date" value="${esc(r.date)}"></div>
+    <div><label class="f" for="week">Week no.</label><input type="number" id="week" data-b="week" value="${esc(r.week)}"></div></div>
+    <div style="margin-top:12px"><label class="f" for="nm">Title or location (optional)</label><input type="text" id="nm" data-b="name" value="${esc(r.name)}" placeholder="e.g. Quarterly drill, main deck"></div>
+    <div class="grid3" style="margin-top:12px;grid-template-columns:2fr 1fr"><div><label class="f" for="ves">Vessel</label><input type="text" id="ves" data-b="vessel" value="${esc(r.vessel)}"></div>
+    <div><label class="f" for="imo">IMO</label><input type="text" id="imo" data-b="imo" value="${esc(r.imo)}" inputmode="numeric"></div></div></div>
+
+  <div class="card"><h2>Drill stages</h2><p class="hint">Add each step with its time and a photo as evidence.</p>
+    <div id="stages">${r.stages.map((s,i)=>`<div class="stage">
+      <input type="time" aria-label="Time" data-s="${i}" data-k="time" value="${esc(s.time)}">
+      <input type="text" aria-label="Stage description" data-s="${i}" data-k="desc" value="${esc(s.desc)}" placeholder="What happened at this stage?">
+      <button class="thumb" data-a="photo" data-i="${i}" aria-label="${s.photo?"Replace photo":"Add photo"}">${s.photo?`<img src="${s.photo}" alt="Stage photo">`:ICON_CAM}</button>
+      <div class="acts row"><button class="btn danger sm" data-a="delStage" data-i="${i}">Delete</button></div></div>`).join("")}</div>
+    <button class="btn light" data-a="addStage" style="margin-top:8px">Add stage</button></div>
+
+  <div class="card"><h2>What was exercised</h2><div class="cols" style="display:grid;gap:12px">
+    <div><label class="f">Equipment tested</label><button class="pickbtn ${r.equipment.length?"":"empty"}" data-a="pickEq">${r.equipment.length?r.equipment.length+" selected":"Select equipment"}</button>${chips(r.equipment)}</div>
+    <div><label class="f">Practical skills exercised</label><button class="pickbtn ${r.skills.length?"":"empty"}" data-a="pickSk">${r.skills.length?r.skills.length+" selected":"Select skills"}</button>${chips(r.skills)}</div>
+    <div><label class="f" for="comms">Communication links and phone numbers tested</label><textarea id="comms" data-b="comms">${esc(r.comms)}</textarea></div></div></div>
+
+  <div class="card"><h2>Training needs and comments</h2><p class="hint">Anything to improve emergency response next time.</p>
+    <textarea id="notes" data-b="notes" aria-label="Training needs and comments">${esc(r.notes)}</textarea></div>
+
+  <div class="card"><h2>Participants</h2>
+    <div class="row"><div style="flex:1;min-width:150px"><label class="f" for="rk">Position / rank</label><select id="rk">${RANKS.map(x=>`<option>${esc(x)}</option>`).join("")}</select></div>
+      <div style="flex:2;min-width:180px"><label class="f" for="pn">Name</label><input type="text" id="pn" list="crew" autocomplete="off"><datalist id="crew">${dl.map(x=>`<option value="${esc(x)}">`).join("")}</datalist></div>
+      <button class="btn" data-a="addPart" style="align-self:flex-end">Add</button></div>
+    <table class="list" style="margin-top:10px"><tbody>${r.participants.map((p,i)=>`<tr><td>${esc(p.rank)}</td><td>${esc(p.name)}</td><td class="row end"><button class="btn danger sm" data-a="delPart" data-i="${i}">Remove</button></td></tr>`).join("")||`<tr><td class="hint">No participants added yet.</td></tr>`}</tbody></table></div>
+  <div class="row end noprint"><button class="btn light" data-a="exit">Exit</button><button class="btn flag" data-a="save">Save report</button></div>`;
+}
+
+/* ---------- view / print ---------- */
+function renderView(r){
+  setBar("Report preview",`<button class="btn ghost sm" data-a="list">All reports</button><button class="btn ghost sm" data-a="edit" data-id="${r.id}">Edit</button><button class="btn flag sm" data-a="print">Print</button>`);
+  const ul=a=>a.length?`<ul>${a.map(x=>`<li>${esc(x)}</li>`).join("")}</ul>`:"<span class='hint'>None recorded</span>";
+  const stages=[...r.stages].sort((a,b)=>a.time.localeCompare(b.time));
+  $("#app").innerHTML=`<div class="card rep"><h2>Drill report: ${esc(r.type||"Untitled")}</h2>${r.name?`<div class="hint">${esc(r.name)}</div>`:""}
+    <div class="meta"><div><small>Vessel</small>${esc(r.vessel)||"–"}</div><div><small>IMO</small>${esc(r.imo)||"–"}</div><div><small>Date</small>${fmtDate(r.date)}</div><div><small>Week</small>${esc(r.week)||"–"}</div></div>
+    <h4>Drill stages and descriptions</h4>${stages.map(s=>`<div class="st"><strong>${esc(s.time)}</strong><span>${esc(s.desc)}</span>${s.photo?`<img src="${s.photo}" alt="Stage photo">`:"<span></span>"}</div>`).join("")||"<span class='hint'>No stages</span>"}
+    <h4>Exercises</h4><div class="cols"><div><strong>Equipment tested</strong>${ul(r.equipment)}</div><div><strong>Practical skills</strong>${ul(r.skills)}</div><div><strong>Communication links</strong><p>${esc(r.comms)||"<span class='hint'>None recorded</span>"}</p></div></div>
+    <h4>Training needs and comments</h4><p>${esc(r.notes)||"<span class='hint'>None recorded</span>"}</p>
+    <h4>Participants</h4>${r.participants.length?`<table class="list"><tbody>${r.participants.map(p=>`<tr><td>${esc(p.rank)}</td><td>${esc(p.name)}</td></tr>`).join("")}</tbody></table>`:"<span class='hint'>None recorded</span>"}</div>`;
+}
+
+/* ---------- options ---------- */
+function options(){
+  const c=getCfg();const d=document.createElement("dialog");
+  d.innerHTML=`<form method="dialog"><h3>Options</h3><div class="opts" style="padding:8px 16px">
+    <label class="f" for="o1">Vessel name</label><input type="text" id="o1" value="${esc(c.vessel)}">
+    <label class="f" for="o2" style="margin-top:10px">IMO number</label><input type="text" id="o2" value="${esc(c.imo)}">
+    <label class="f" for="o3" style="margin-top:10px">Crew list (one name per line)</label><textarea id="o3">${esc(c.crew.join("\n"))}</textarea>
+    <div class="row" style="margin:12px 0"><button type="button" class="btn light sm" id="ex">Export backup</button><label class="btn light sm" style="cursor:pointer">Import backup<input type="file" id="im" accept=".json" hidden></label></div></div>
+    <footer><button class="btn light" value="cancel">Close</button><button class="btn" value="ok">Save</button></footer></form>`;
+  document.body.append(d);d.showModal();
+  d.querySelector("#ex").onclick=async()=>{const blob=new Blob([JSON.stringify(await dbAll())],{type:"application/json"});
+    const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=`drill-reports-${today()}.json`;a.click()};
+  d.querySelector("#im").onchange=async e=>{try{const arr=JSON.parse(await e.target.files[0].text());
+    for(const r of arr)if(r&&r.id)await dbPut(r);toast(`Imported ${arr.length} reports`);}catch(x){toast("That file isn't a valid backup")}};
+  d.addEventListener("close",()=>{
+    if(d.returnValue==="ok"){setCfg({vessel:d.querySelector("#o1").value.trim(),imo:d.querySelector("#o2").value.trim(),
+      crew:d.querySelector("#o3").value.split("\n").map(s=>s.trim()).filter(Boolean)});toast("Options saved")}
+    d.remove();if(!location.hash.match(/new|edit/))route()});
+}
+
+/* ---------- photos ---------- */
+function shrink(file,max=900){return new Promise((res,rej)=>{const img=new Image();img.onload=()=>{
+  const k=Math.min(1,max/Math.max(img.width,img.height));const c=document.createElement("canvas");
+  c.width=Math.round(img.width*k);c.height=Math.round(img.height*k);c.getContext("2d").drawImage(img,0,0,c.width,c.height);
+  URL.revokeObjectURL(img.src);res(c.toDataURL("image/jpeg",.72))};img.onerror=rej;img.src=URL.createObjectURL(file)})}
+$("#cam").addEventListener("change",async e=>{const f=e.target.files[0];e.target.value="";if(!f||camIdx==null)return;
+  try{cur.stages[camIdx].photo=await shrink(f);dirty=true;renderEditor()}catch(x){toast("Couldn't read that photo")}});
+
+/* ---------- events ---------- */
+document.addEventListener("input",e=>{
+  const t=e.target;if(!cur)return;
+  if(t.dataset.b){cur[t.dataset.b]=t.value;dirty=true;if(t.dataset.b==="date"){cur.week=isoWeek(t.value);const w=$("#week");if(w)w.value=cur.week}}
+  if(t.dataset.s!==undefined){cur.stages[+t.dataset.s][t.dataset.k]=t.value;dirty=true}
+});
+document.addEventListener("click",async e=>{
+  const b=e.target.closest("[data-a]");if(!b)return;const a=b.dataset.a,i=+b.dataset.i,id=b.dataset.id;
+  switch(a){
+    case"new":return go("new");
+    case"view":return go("view/"+id);
+    case"edit":return go("edit/"+id);
+    case"list":return go("");
+    case"exit":if(leave()){dirty=false;go("")}return;
+    case"options":return options();
+    case"print":return print();
+    case"del":if(confirm("Delete this report? This can't be undone.")){await dbDel(id);toast("Report deleted");renderList()}return;
+    case"pickType":{const r=await pick({title:"Select drill type",options:DRILL_TYPES,selected:[cur.type],multi:false});if(r&&r[0]){cur.type=r[0];dirty=true;renderEditor()}return}
+    case"pickEq":{const r=await pick({title:"Select equipment",options:EQUIPMENT,selected:cur.equipment});if(r){cur.equipment=r;dirty=true;renderEditor()}return}
+    case"pickSk":{const r=await pick({title:"Select skills",options:SKILLS,selected:cur.skills});if(r){cur.skills=r;dirty=true;renderEditor()}return}
+    case"addStage":cur.stages.push({time:nowHM(),desc:"",photo:""});dirty=true;renderEditor();return;
+    case"delStage":cur.stages.splice(i,1);dirty=true;renderEditor();toast("Stage deleted");return;
+    case"photo":camIdx=i;$("#cam").click();return;
+    case"addPart":{const n=$("#pn").value.trim();if(!n){toast("Enter a name first");return}
+      cur.participants.push({rank:$("#rk").value,name:n});dirty=true;renderEditor();$("#pn").focus();return}
+    case"delPart":cur.participants.splice(i,1);dirty=true;renderEditor();return;
+    case"save":{if(!cur.type){toast("Select a drill type first");return}
+      cur.updated=Date.now();await dbPut(cur);dirty=false;toast("Report saved");
+      if(!location.hash.includes("edit"))history.replaceState(null,"","#/edit/"+cur.id);return}
+    case"install":if(deferred){deferred.prompt();deferred=null}return;
+  }
+});
+addEventListener("beforeunload",e=>{if(dirty){e.preventDefault();e.returnValue=""}});
+
+/* ---------- PWA ---------- */
+let deferred=null;
+addEventListener("beforeinstallprompt",e=>{e.preventDefault();deferred=e;const n=$("#inst");if(n)n.style.display="block"});
+if("serviceWorker"in navigator)addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));
+if(navigator.storage&&navigator.storage.persist)navigator.storage.persist();
+route();
+</script>
+</body>
+</html>
